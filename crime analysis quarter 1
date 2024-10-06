@@ -1,0 +1,422 @@
+SELECT *
+FROM crime1; #id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+SELECT *
+FROM crime3; #same as crime1, march
+SELECT *
+FROM crime9; 
+SELECT *
+FROM location; #location_id, location
+SELECT *
+FROM crime_type; #crime_type_id, crime
+
+-- single query to answer each question
+-- don't write a separate answer
+-- ALIAS COLUMN HEADERS (no underscores)
+-- FORMAT ALL PERCENTAGES
+
+USE chicago;
+
+/* Question 1: Report each crime in March and the number of times each occurred. Order the results high to low based on frequency. */
+
+SELECT 
+	crime AS "Crime Type",
+	COUNT(date) AS "Number of Occurences"
+FROM crime3 c
+JOIN crime_type t ON c.crime_type_id = t.crime_type_id
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/* Question 2: How many BURGLARY crimes committed in March resulted in an arrest? */
+
+SELECT 
+	COUNT(case_number) AS "Number of Burglaries Resulting in Arrest in March"
+FROM crime3 c
+JOIN crime_type t ON c.crime_type_id = t.crime_type_id
+WHERE crime = "BURGLARY" AND arrest = "true";
+
+/* Question 3: How many BURGLARY crimes committed in the first quarter of the year (January, February, March) resulted in an arrest? */
+
+WITH totalcrimes AS (
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime1
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime2
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime3)
+SELECT COUNT(*) AS "Number of Burglary Arrests Quarter 1"
+FROM totalcrimes q
+JOIN crime_type c ON q.crime_type_id = c.crime_type_id 
+WHERE c.crime = "BURGLARY"
+AND q.arrest = "true";
+	
+/* Question 4: What percent of BURGLARY crimes committed in the first Quarter of the year resulted in an arrest? Return a table that includes the number of BURGLARY crimes and the % resulting in an arrest */
+
+WITH totalcrimes AS (
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime1
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime2
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime3)
+SELECT COUNT(*) AS "Total Burglary Crimes Quarter 1", 
+		COUNT(CASE WHEN q.arrest = "true" THEN 1 END) AS "Burglary Arrests",
+		CONCAT(FORMAT(COUNT(CASE WHEN q.arrest = 'True' THEN 1 END) * 100 / COUNT(*), 2),"%") AS "Arrest Percentage (%)"
+FROM crime_type c
+JOIN totalcrimes q ON q.crime_type_id = c.crime_type_id 
+WHERE c.crime = "BURGLARY";
+
+/* Question 5: Return the first and last homicide of in the data */
+WITH totalcrimes AS (
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime1
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime2
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime3
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime4
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime5
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime6
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime7
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime8
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime9),
+first_homicide AS (
+	SELECT t.id AS first_id, t.case_number AS first_case_number, t.date AS first_date, t.address AS first_address,
+           t.crime_type_id AS first_crime_type_id, t.location_id AS first_location_id, t.arrest AS first_arrest,
+           t.domestic AS first_domestic, t.district AS first_district
+	FROM totalcrimes t
+	JOIN crime_type c ON t.crime_type_id = c.crime_type_id
+	WHERE c.crime = 'HOMICIDE'
+	ORDER BY t.date ASC
+	LIMIT 1),
+last_homicide AS (SELECT t.id AS last_id, t.case_number AS last_case_number, t.date AS last_date, t.address AS last_address,
+           t.crime_type_id AS last_crime_type_id, t.location_id AS last_location_id, t.arrest AS last_arrest,
+           t.domestic AS last_domestic, t.district AS last_district
+	FROM totalcrimes t
+	JOIN crime_type c ON t.crime_type_id = c.crime_type_id
+	WHERE c.crime = 'HOMICIDE'
+	ORDER BY t.date DESC
+	LIMIT 1)
+SELECT  
+	first_homicide.first_id AS "First Homicide ID",
+    first_homicide.first_case_number AS "First Homicide Case Number",
+    first_homicide.first_date AS "First Homicide Date",
+    first_homicide.first_address AS "First Homicide Address",
+    first_homicide.first_arrest AS "First Homicide Arrest",
+    first_homicide.first_domestic AS "First Homicide Domestic",
+    first_homicide.first_district AS "First Homicide District",
+    last_homicide.last_id AS "Last Homicide ID",
+    last_homicide.last_case_number AS "Last Homicide Case Number",
+    last_homicide.last_date AS "Last Homicide Date",
+    last_homicide.last_address AS "Last Homicide Address",
+    last_homicide.last_arrest AS "Last Homicide Arrest",
+    last_homicide.last_domestic AS "Last Homicide Domestic",
+    last_homicide.last_district AS "Last Homicide District"
+FROM first_homicide
+JOIN last_homicide ON first_homicide.first_crime_type_id = last_homicide.last_crime_type_id;
+
+/* Question 6: Return crime, date, address, and arrest columns for all BURGLARY, THEFT, and ASSAULT crimes that resulted in an arrest in March. Order results by crime type and date. */
+
+SELECT 
+CASE
+	WHEN g.crime = "ASSAULT" THEN "Assault"
+	WHEN g.crime = "BURGLARY" THEN "Burglary"
+	WHEN g.crime = "THEFT" THEN "Theft"
+END AS "Crime",
+	c.date AS "Date",
+	c.address AS "Address",
+	c.arrest AS "Arrest (T/F)"
+FROM crime_type g 
+JOIN crime3 c on g.crime_type_id = c.crime_type_id
+WHERE arrest = "true" AND (crime = "BURGLARY" OR crime = "THEFT" OR crime = "ASSAULT")
+ORDER BY 1;
+
+/* Question 7: What are the most common crimes committed on Michigan Ave? Return a table that lists the crime and frequency for all crimes that have occurred on Michigan Ave, ordered high to low by frequency*/
+
+WITH totalcrimes AS (
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime1
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime2
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime3
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime4
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime5
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime6
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime7
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime8
+	UNION ALL
+	SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+	FROM crime9),
+jointtable AS (
+SELECT c.crime AS "Crime", COUNT(*) AS "Frequency"
+FROM totalcrimes t
+JOIN crime_type c ON c.crime_type_id = t.crime_type_id
+WHERE t.address LIKE "%MICHIGAN AVE%"
+GROUP BY c.crime
+ORDER BY 2 DESC)
+	SELECT * 
+	FROM jointtable;
+	
+/* Question 8: Do more crimes occur on North (N) or South (S) Michigan Ave? Return a table that shows the number of crimes separately for North and South Michigan Ave. */
+	
+WITH totalcrimes AS (
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime1
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime2
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime3
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime4
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime5
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime6
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime7
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime8
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime9)
+ SELECT 
+    CASE
+  		WHEN totalcrimes.address LIKE "%N%Michigan Ave%" THEN "North Michigan Ave"
+  		WHEN totalcrimes.address LIKE "%S%Michigan Ave%" THEN "South Michigan Ave"
+  		ELSE 'Other'
+  		END AS "Michigan Ave N/S",
+  	COUNT(*) AS "Number of Crimes"
+ FROM totalcrimes 
+ WHERE totalcrimes.address LIKE "%Michigan Ave%"
+GROUP BY 1
+ORDER BY 2 DESC;
+  	
+/* Question 9: Report the most common crime in 2024 for each location */
+
+WITH totalcrimes AS (
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime1
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime2
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime3
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime4
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime5
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime6
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime7
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime8
+    UNION ALL
+    SELECT id, case_number, date, address, crime_type_id, location_id, arrest, domestic, district
+    FROM crime9
+),
+crime_counts AS (
+    SELECT 
+        l.location_id,
+        CASE
+            WHEN l.location = 'ABANDONED BUILDING' THEN 'Abandoned Building'
+            WHEN l.location = 'AIRCRAFT' THEN 'Aircraft'
+            WHEN l.location = 'AIRPORT' THEN 'Airport'
+            WHEN l.location = 'ALLEY' THEN 'Alley'
+            WHEN l.location = 'ANIMAL HOSPITAL' THEN 'Animal Hospital'
+            WHEN l.location = 'APARTMENT' THEN 'Apartment'
+            WHEN l.location = 'APPLIANCE STORE' THEN 'Appliance Store'
+            WHEN l.location = 'ATHLETIC CLUB' THEN 'Athletic Club'
+            WHEN l.location = 'ATM (AUTOMATIC TELLER MACHINE)' THEN 'ATM (Automatic Teller Machine)'
+            WHEN l.location = 'AUTO' THEN 'Auto'
+            WHEN l.location = 'AUTO / BOAT / RV DEALERSHIP' THEN 'Auto / Boat / RV Dealership'
+            WHEN l.location = 'BANK' THEN 'Bank'
+            WHEN l.location = 'BAR OR TAVERN' THEN 'Bar or Tavern'
+            WHEN l.location = 'BARBERSHOP' THEN 'Barbershop'
+            WHEN l.location = 'BASEMENT' THEN 'Basement'
+            WHEN l.location = 'BOAT / WATERCRAFT' THEN 'Boat / Watercraft'
+            WHEN l.location = 'BOWLING ALLEY' THEN 'Bowling Alley'
+            WHEN l.location = 'BRIDGE' THEN 'Bridge'
+            WHEN l.location = 'CAR WASH' THEN 'Car Wash'
+            WHEN l.location = 'CASINO/GAMBLING ESTABLISHMENT' THEN 'Casino/Gambling Establishment'
+            WHEN l.location = 'CEMETARY' THEN 'Cemetery'
+            WHEN l.location = 'CHICAGO HOUSING AUTHORITY' THEN 'Chicago Housing Authority'
+            WHEN l.location = 'CHICAGO TRANSIT AUTHORITY' THEN 'Chicago Transit Authority'
+            WHEN l.location = 'CHURCH / SYNAGOGUE / PLACE OF WORSHIP' THEN 'Church / Synagogue / Place of Worship'
+            WHEN l.location = 'CLEANING STORE' THEN 'Cleaning Store'
+            WHEN l.location = 'COIN OPERATED MACHINE' THEN 'Coin Operated Machine'
+            WHEN l.location = 'COLLEGE' THEN 'College'
+            WHEN l.location = 'COMMERCIAL / BUSINESS OFFICE' THEN 'Commercial / Business Office'
+            WHEN l.location = 'CONSTRUCTION SITE' THEN 'Construction Site'
+            WHEN l.location = 'CONVENIENCE STORE' THEN 'Convenience Store'
+            WHEN l.location = 'CREDIT UNION' THEN 'Credit Union'
+            WHEN l.location = 'CURRENCY EXCHANGE' THEN 'Currency Exchange'
+            WHEN l.location = 'DAY CARE CENTER' THEN 'Day Care Center'
+            WHEN l.location = 'DEPARTMENT STORE' THEN 'Department Store'
+            WHEN l.location = 'DRIVEWAY' THEN 'Driveway'
+            WHEN l.location = 'DRUG STORE' THEN 'Drug Store'
+            WHEN l.location = 'FACTORY / MANUFACTURING BUILDING' THEN 'Factory / Manufacturing Building'
+            WHEN l.location = 'FARM' THEN 'Farm'
+            WHEN l.location = 'FEDERAL BUILDING' THEN 'Federal Building'
+            WHEN l.location = 'FIRE STATION' THEN 'Fire Station'
+            WHEN l.location = 'FOREST PRESERVE' THEN 'Forest Preserve'
+            WHEN l.location = 'GARAGE' THEN 'Garage'
+            WHEN l.location = 'GAS STATION' THEN 'Gas Station'
+            WHEN l.location = 'GOVERNMENT BUILDING / PROPERTY' THEN 'Government Building / Property'
+            WHEN l.location = 'GROCERY FOOD STORE' THEN 'Grocery Food Store'
+            WHEN l.location = 'HALLWAY' THEN 'Hallway'
+            WHEN l.location = 'HIGHWAY / EXPRESSWAY' THEN 'Highway / Expressway'
+            WHEN l.location = 'HOSPITAL' THEN 'Hospital'
+            WHEN l.location = 'HOTEL / MOTEL' THEN 'Hotel / Motel'
+            WHEN l.location = 'HOUSE' THEN 'House'
+            WHEN l.location = 'JAIL / LOCK-UP FACILITY' THEN 'Jail / Lock-Up Facility'
+            WHEN l.location = 'KENNEL' THEN 'Kennel'
+            WHEN l.location = 'LAKEFRONT / WATERFRONT / RIVERBANK' THEN 'Lakefront / Waterfront / Riverbank'
+            WHEN l.location = 'LIBRARY' THEN 'Library'
+            WHEN l.location = 'LIQUOR STORE' THEN 'Liquor Store'
+            WHEN l.location = 'MEDICAL / DENTAL OFFICE' THEN 'Medical / Dental Office'
+            WHEN l.location = 'MOVIE HOUSE / THEATER' THEN 'Movie House / Theater'
+            WHEN l.location = 'NEWSSTAND' THEN 'Newsstand'
+            WHEN l.location = 'NURSING / RETIREMENT HOME' THEN 'Nursing / Retirement Home'
+            WHEN l.location = 'OFFICE' THEN 'Office'
+            WHEN l.location = 'OTHER (SPECIFY)' THEN 'Other (Specify)'
+            WHEN l.location = 'OTHER COMMERCIAL TRANSPORTATION' THEN 'Other Commercial Transportation'
+            WHEN l.location = 'OTHER RAILROAD PROPERTY / TRAIN DEPOT' THEN 'Other Railroad Property / Train Depot'
+            WHEN l.location = 'PARK PROPERTY' THEN 'Park Property'
+            WHEN l.location = 'PARKING LOT' THEN 'Parking Lot'
+            WHEN l.location = 'PAWN SHOP' THEN 'Pawn Shop'
+            WHEN l.location = 'POLICE FACILITY / VEHICLE PARKING LOT' THEN 'Police Facility / Vehicle Parking Lot'
+            WHEN l.location = 'POOL ROOM' THEN 'Pool Room'
+            WHEN l.location = 'PORCH' THEN 'Porch'
+            WHEN l.location = 'RESIDENCE' THEN 'Residence'
+            WHEN l.location = 'RESTAURANT' THEN 'Restaurant'
+            WHEN l.location = 'RETAIL STORE' THEN 'Retail Store'
+            WHEN l.location = 'SCHOOL' THEN 'School'
+            WHEN l.location = 'SIDEWALK' THEN 'Sidewalk'
+            WHEN l.location = 'SMALL RETAIL STORE' THEN 'Small Retail Store'
+            WHEN l.location = 'SPORTS ARENA / STADIUM' THEN 'Sports Arena / Stadium'
+            WHEN l.location = 'STREET' THEN 'Street'
+            WHEN l.location = 'TAVERN' THEN 'Tavern'
+            WHEN l.location = 'TAXICAB' THEN 'Taxicab'
+            WHEN l.location = 'VACANT LOT' THEN 'Vacant Lot'
+            WHEN l.location = 'VEHICLE' THEN 'Vehicle'
+            WHEN l.location = 'WAREHOUSE' THEN 'Warehouse'
+            WHEN l.location = 'YARD' THEN 'Yard'
+        END AS location_description,
+        t.crime_type_id,
+        COUNT(*) AS crime_count
+    FROM totalcrimes t
+    JOIN location l ON t.location_id = l.location_id
+    JOIN crime_type ct ON t.crime_type_id = ct.crime_type_id
+    GROUP BY location_description, t.crime_type_id, l.location_id
+),
+max_crime_count AS (
+    SELECT location_description, MAX(crime_count) AS max_count
+    FROM crime_counts
+    GROUP BY location_description
+)
+SELECT 
+    l.location AS "Location",
+    ct.crime AS "Crime",
+    cc.crime_count AS "Frequency"
+FROM crime_counts cc
+JOIN max_crime_count mcc ON cc.location_description = mcc.location_description
+    AND cc.crime_count = mcc.max_count
+JOIN crime_type ct ON cc.crime_type_id = ct.crime_type_id
+JOIN location l ON cc.location_id = l.location_id
+ORDER BY cc.location_description;
+)
+
+  
+/* Question 10: Report the arrest rate by month for January, February, and March. Please format this rate as a percentage rounded to 1 or 2 decimals. */
+
+WITH monthly_crimes AS 
+    (SELECT 'January' AS Month, date, arrest
+    FROM crime1
+    UNION ALL
+    SELECT 'February' AS Month, date, arrest
+    FROM crime2
+    UNION ALL
+    SELECT 'March' AS Month, date, arrest
+    FROM crime3)
+SELECT 
+    month AS "Month in Quarter 1",
+    CONCAT(FORMAT(ROUND(COUNT(CASE
+	    	WHEN arrest = "true" THEN 1
+	    END) * 100
+	    / COUNT(*), 1), 2),"%") AS "Arrest Rate (%)"
+FROM monthly_crimes
+GROUP BY Month 
+ORDER BY 'January', 'February', 'March';
+
+/* Question 11: Which crimes occurred more frequently in January than February? Return a table that lists crime type, 
+ * -- count in January, count in February. Only include rows that had more crimes in January than February. 
+ * -- Order results high to low by January totals. */
+
+WITH jan_crime AS
+	(SELECT crime,
+	COUNT(*) AS jan_count, 
+	t.crime_type_id
+	FROM crime1 c
+	JOIN crime_type t ON c.crime_type_id = t.crime_type_id
+	GROUP BY 3,1),
+feb_crime AS
+	(SELECT crime,
+	COUNT(*) AS feb_count,
+	t.crime_type_id
+	FROM crime2 c
+	JOIN crime_type t ON c.crime_type_id = t.crime_type_id
+	GROUP BY 3,1)
+SELECT
+	j.crime AS "Crime Type",
+	j.jan_count AS "January Count",
+	f.feb_count AS "February Count"
+FROM jan_crime j
+LEFT JOIN feb_crime f ON j.crime_type_id = f.crime_type_id
+WHERE j.jan_count > f.feb_count
+ORDER BY j.jan_count DESC;
+
+
